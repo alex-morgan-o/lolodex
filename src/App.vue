@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import List from "./views/List.vue";
+import { onMounted } from "vue";
+import { useAuth } from "./composables/use-auth";
+import { RouterView } from "vue-router";
+
+const { initAuth } = useAuth();
+
+// Initialize authentication on app mount
+onMounted(async () => {
+    await initAuth();
+});
 </script>
 
 <template>
     <div class="app">
         <main class="app-main">
-            <List />
+            <RouterView />
         </main>
     </div>
 </template>

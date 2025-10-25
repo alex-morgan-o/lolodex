@@ -1,5 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useAuth } from "../composables/use-auth";
+import { useRouter } from "vue-router";
+
+const { signOut, user } = useAuth();
+const router = useRouter();
+
+const handleSignOut = async () => {
+    try {
+        await signOut();
+        router.push("/auth");
+    } catch (error) {
+        console.error("Error signing out:", error);
+    }
+};
 
 interface ContentItem {
     id: string;
@@ -126,6 +140,12 @@ const getTagColor = () => {
                     />
                 </div>
             </div>
+            <div class="user-section">
+                <span class="user-email">{{ user?.email }}</span>
+                <button @click="handleSignOut" class="sign-out-button">
+                    Sign Out
+                </button>
+            </div>
         </div>
 
         <div class="content-grid">
@@ -226,6 +246,40 @@ const getTagColor = () => {
 
 .search-input::placeholder {
     color: #666;
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-email {
+    color: #aaa;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.sign-out-button {
+    height: 36px;
+    padding: 0 16px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sign-out-button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sign-out-button:active {
+    transform: scale(0.98);
 }
 
 .content-count {
@@ -346,6 +400,17 @@ const getTagColor = () => {
 
     .search-section {
         max-width: none;
+    }
+
+    .user-section {
+        justify-content: space-between;
+    }
+
+    .user-email {
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .content-grid {
