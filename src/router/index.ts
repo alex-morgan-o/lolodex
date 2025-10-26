@@ -3,6 +3,7 @@ import { useSupabase } from "../composables/use-supabase";
 import List from "../views/List.vue";
 import Auth from "../views/Auth.vue";
 import Settings from "../views/Settings.vue";
+import Record from "../views/Record.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,6 +12,12 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: List,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/record/:id",
+      name: "record",
+      component: Record,
       meta: { requiresAuth: true },
     },
     {

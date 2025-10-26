@@ -131,6 +131,10 @@ const formatDate = (dateString: string) => {
                     v-for="record in filteredItems"
                     :key="record.id"
                     class="grid-row"
+                    role="button"
+                    tabindex="0"
+                    @click="router.push({ name: 'record', params: { id: record.id } })"
+                    @keydown.enter="router.push({ name: 'record', params: { id: record.id } })"
                 >
                     <div class="grid-cell title-col">
                         <div class="title-text">
@@ -310,6 +314,7 @@ const formatDate = (dateString: string) => {
     display: flex;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     transition: background-color 0.2s ease;
+    cursor: pointer;
 }
 
 .grid-row:hover {
