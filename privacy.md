@@ -4,7 +4,6 @@ Last updated: 2025-10-26
 
 ## Who We Are
 - Invisible Block Inc.
-- 2945 Dundas St. W. #252D, Toronto, ON M6P 1Z2
 - Contact: alex@InvisibleBlock.com
 
 ## Scope and Audience
@@ -91,4 +90,3 @@ Last updated: 2025-10-26
 
 ## Contact
 - For questions or privacy requests, contact: alex@InvisibleBlock.com
-
