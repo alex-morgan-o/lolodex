@@ -90,3 +90,4 @@ Last updated: 2025-10-26
 
 ## Contact
 - For questions or privacy requests, contact: alex@InvisibleBlock.com
+

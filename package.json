@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "cp privacy.md public/privacy.md",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },
