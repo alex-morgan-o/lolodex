@@ -55,7 +55,7 @@ async function initializeAuth() {
 }
 
 // Navigation guard to check authentication
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // Ensure auth is initialized before checking
   await initializeAuth();
 
