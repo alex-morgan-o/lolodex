@@ -1,21 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { useAuth } from "../composables/use-auth";
 import { useProcessedEmails } from "../composables/use-processed-emails";
 import { useRouter } from "vue-router";
 
-const { signOut, user } = useAuth();
 const { records, loading, error } = useProcessedEmails();
 const router = useRouter();
-
-const handleSignOut = async () => {
-    try {
-        await signOut();
-        router.push("/auth");
-    } catch (error) {
-        console.error("Error signing out:", error);
-    }
-};
 
 const searchQuery = ref("");
 
@@ -85,13 +74,28 @@ const formatDate = (dateString: string) => {
                     />
                 </div>
             </div>
-            <div class="user-section">
-                <span class="user-email">{{ user?.email }}</span>
-                <button @click="router.push('/settings')" class="sign-out-button">
-                    Settings
-                </button>
-                <button @click="handleSignOut" class="sign-out-button">
-                    Sign Out
+            <div class="actions-section">
+                <button
+                    @click="router.push('/settings')"
+                    class="settings-button"
+                    aria-label="Open settings"
+                    title="Settings"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                    >
+                        <path
+                            d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+                        />
+                        <path
+                            d="M19.4 15a7.5 7.5 0 0 0 .1-2 7.5 7.5 0 0 0-.1-2l2.1-1.6a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.5 1a7.5 7.5 0 0 0-1.73-1L14 2.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5L9.4 4.1a7.5 7.5 0 0 0-1.73 1l-2.5-1a.5.5 0 0 0-.6.22l-2 3.46a.5.5 0 0 0 .12.64l2.1 1.6a7.5 7.5 0 0 0 0 4L2.19 15a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .6.22l2.5-1a7.5 7.5 0 0 0 1.73 1l.6 2.1a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5l.6-2.1a7.5 7.5 0 0 0 1.73-1l2.5 1a.5.5 0 0 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64Z"
+                        />
+                    </svg>
                 </button>
             </div>
         </div>
@@ -203,38 +207,32 @@ const formatDate = (dateString: string) => {
     color: #666;
 }
 
-.user-section {
+.actions-section {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
-.user-email {
-    color: #aaa;
-    font-size: 14px;
-    font-weight: 400;
-}
-
-.sign-out-button {
-    height: 36px;
-    padding: 0 16px;
+.settings-button {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
+    border-radius: 50%;
     color: #fff;
-    font-size: 13px;
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.sign-out-button:hover {
+.settings-button:hover {
     background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-.sign-out-button:active {
-    transform: scale(0.98);
+.settings-button:active {
+    transform: scale(0.96);
 }
 
 .content-count {
@@ -395,7 +393,7 @@ const formatDate = (dateString: string) => {
         max-width: none;
     }
 
-    .user-section {
+    .actions-section {
         justify-content: space-between;
     }
 
