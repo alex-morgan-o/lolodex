@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useSupabase } from "../composables/use-supabase";
 import List from "../views/List.vue";
 import Auth from "../views/Auth.vue";
+import Settings from "../views/Settings.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,6 +18,12 @@ const router = createRouter({
       name: "auth",
       component: Auth,
       meta: { requiresAuth: false },
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      component: Settings,
+      meta: { requiresAuth: true },
     },
   ],
 });

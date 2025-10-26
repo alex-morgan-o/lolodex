@@ -87,6 +87,9 @@ const formatDate = (dateString: string) => {
             </div>
             <div class="user-section">
                 <span class="user-email">{{ user?.email }}</span>
+                <button @click="router.push('/settings')" class="sign-out-button">
+                    Settings
+                </button>
                 <button @click="handleSignOut" class="sign-out-button">
                     Sign Out
                 </button>
