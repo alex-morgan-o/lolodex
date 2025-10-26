@@ -16,9 +16,7 @@ export interface ProcessedEmailRecord {
 
 /**
  * Composable for subscribing to processed email records
- * Subscribes to records where:
- * - from_email matches the current user's email
- * - to_email matches the hardcoded record email (alex@record.lolodex.com)
+ * Subscribes to records where from_email matches the current user's email
  */
 export function useProcessedEmails() {
   const supabase = useSupabase()
@@ -29,9 +27,6 @@ export function useProcessedEmails() {
   const error = ref<string | null>(null)
 
   let channel: RealtimeChannel | null = null
-
-  // Hardcoded record email as specified
-  const RECORD_EMAIL = 'alex@record.lolodex.com'
 
   /**
    * Fetch initial records from the database
@@ -48,7 +43,7 @@ export function useProcessedEmails() {
       const { data, error: fetchError } = await supabase
         .from('processed_email_recrds')
         .select('*')
-        .or(`from_email.eq.${user.value.email},to_email.eq.${RECORD_EMAIL}`)
+        .eq('from_email', user.value.email)
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
@@ -91,23 +86,6 @@ export function useProcessedEmails() {
         (payload) => {
           console.log('New record inserted:', payload)
           records.value = [payload.new as ProcessedEmailRecord, ...records.value]
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'processed_email_recrds',
-          filter: `to_email=eq.${RECORD_EMAIL}`,
-        },
-        (payload) => {
-          console.log('New record inserted:', payload)
-          // Check if record already exists to avoid duplicates
-          const exists = records.value.some(r => r.id === (payload.new as ProcessedEmailRecord).id)
-          if (!exists) {
-            records.value = [payload.new as ProcessedEmailRecord, ...records.value]
-          }
         }
       )
       .on(
