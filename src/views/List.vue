@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useAuth } from "../composables/use-auth";
+import { useProcessedEmails } from "../composables/use-processed-emails";
 import { useRouter } from "vue-router";
 
 const { signOut, user } = useAuth();
+const { records, loading, error } = useProcessedEmails();
 const router = useRouter();
 
 const handleSignOut = async () => {
@@ -15,86 +17,33 @@ const handleSignOut = async () => {
     }
 };
 
-interface ContentItem {
-    id: string;
-    topic: string;
-    title: string;
-    summary: string;
-    people: string[];
-    date: Date;
-    tags: string[];
-}
-
 const searchQuery = ref("");
-const selectedFilter = ref("all");
-
-const contentItems = ref<ContentItem[]>([
-    {
-        id: "1",
-        topic: "Product Strategy",
-        title: "Q4 Planning Meeting Notes",
-        summary: "Discussion of key initiatives and resource allocation for Q4",
-        people: ["Sarah Chen", "Mike Johnson"],
-        date: new Date("2024-10-20"),
-        tags: ["strategy", "planning", "urgent"],
-    },
-    {
-        id: "2",
-        topic: "Customer Feedback",
-        title: "User Experience Survey Results",
-        summary: "Analysis of user satisfaction scores and improvement areas",
-        people: ["Alex Rivera", "Emma Watson"],
-        date: new Date("2024-10-19"),
-        tags: ["feedback", "ux", "research"],
-    },
-    {
-        id: "3",
-        topic: "Technical Documentation",
-        title: "API Integration Guidelines",
-        summary: "Step-by-step guide for third-party API implementation",
-        people: ["David Kim"],
-        date: new Date("2024-10-18"),
-        tags: ["tech", "documentation", "api"],
-    },
-    {
-        id: "4",
-        topic: "Marketing Campaign",
-        title: "Social Media Content Calendar",
-        summary: "Scheduled posts and engagement strategy for next quarter",
-        people: ["Lisa Park", "Tom Wilson", "Ana Garcia"],
-        date: new Date("2024-10-17"),
-        tags: ["marketing", "social", "content"],
-    },
-    {
-        id: "5",
-        topic: "Financial Report",
-        title: "Monthly Budget Review",
-        summary: "Overview of expenses, revenue, and variance analysis",
-        people: ["Robert Brown"],
-        date: new Date("2024-10-16"),
-        tags: ["finance", "budget", "monthly"],
-    },
-]);
 
 const filteredItems = computed(() => {
-    return contentItems.value.filter((item) => {
+    if (!records.value) return [];
+
+    return records.value.filter((record) => {
         const matchesSearch =
             searchQuery.value === "" ||
-            item.title
+            record.title
                 .toLowerCase()
                 .includes(searchQuery.value.toLowerCase()) ||
-            item.topic
+            record.summary
                 .toLowerCase()
                 .includes(searchQuery.value.toLowerCase()) ||
-            item.tags.some((tag) =>
-                tag.toLowerCase().includes(searchQuery.value.toLowerCase()),
-            );
+            record.from_email
+                .toLowerCase()
+                .includes(searchQuery.value.toLowerCase()) ||
+            record.to_email
+                .toLowerCase()
+                .includes(searchQuery.value.toLowerCase());
 
         return matchesSearch;
     });
 });
 
-const formatDate = (date: Date) => {
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffTime = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -107,10 +56,6 @@ const formatDate = (date: Date) => {
         month: "short",
         day: "numeric",
     });
-};
-
-const getTagColor = () => {
-    return "rgba(255, 255, 255, 0.08)";
 };
 </script>
 
@@ -148,46 +93,53 @@ const getTagColor = () => {
             </div>
         </div>
 
-        <div class="content-grid">
+        <div v-if="loading" class="loading-state">
+            <div class="loading-text">Loading your emails...</div>
+        </div>
+
+        <div v-else-if="error" class="error-state">
+            <div class="error-text">{{ error }}</div>
+        </div>
+
+        <div v-else-if="filteredItems.length === 0" class="empty-state">
+            <div class="empty-text">
+                {{
+                    searchQuery
+                        ? "No emails found matching your search"
+                        : "No emails yet"
+                }}
+            </div>
+        </div>
+
+        <div v-else class="content-grid">
             <!-- Always keep the header hidden from the user -->
             <div v-if="false" class="grid-header">
                 <div class="header-cell title-col">Title</div>
                 <div class="header-cell summary-col">Summary</div>
                 <div class="header-cell date-col">Date</div>
-                <div class="header-cell tags-col">Tags</div>
             </div>
 
             <div class="grid-body">
                 <div
-                    v-for="item in filteredItems"
-                    :key="item.id"
+                    v-for="record in filteredItems"
+                    :key="record.id"
                     class="grid-row"
                 >
                     <div class="grid-cell title-col">
-                        <div class="title-text">{{ item.title }}</div>
+                        <div class="title-text">
+                            {{ record.title || "Untitled" }}
+                        </div>
                     </div>
 
                     <div class="grid-cell summary-col">
-                        <div class="summary-text">{{ item.summary }}</div>
+                        <div class="summary-text">
+                            {{ record.summary || "No summary available" }}
+                        </div>
                     </div>
 
                     <div class="grid-cell date-col">
-                        <div class="date-text">{{ formatDate(item.date) }}</div>
-                    </div>
-
-                    <div class="grid-cell tags-col">
-                        <div class="tags-list">
-                            <span
-                                v-for="tag in item.tags.slice(0, 3)"
-                                :key="tag"
-                                class="tag"
-                                :style="{ backgroundColor: getTagColor(tag) }"
-                            >
-                                {{ tag }}
-                            </span>
-                            <span v-if="item.tags.length > 3" class="tag-count">
-                                +{{ item.tags.length - 3 }}
-                            </span>
+                        <div class="date-text">
+                            {{ formatDate(record.created_at) }}
                         </div>
                     </div>
                 </div>
@@ -288,13 +240,40 @@ const getTagColor = () => {
     font-weight: 300;
 }
 
+.loading-state,
+.error-state,
+.empty-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 24px;
+    text-align: center;
+}
+
+.loading-text {
+    color: #aaa;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.error-text {
+    color: #ff6b6b;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.empty-text {
+    color: #888;
+    font-size: 14px;
+    font-weight: 400;
+}
+
 .content-grid {
     overflow: hidden;
 }
 
 .grid-header {
-    display: grid;
-    grid-template-columns: 2fr 3fr 1fr 1.5fr;
+    display: flex;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -307,13 +286,27 @@ const getTagColor = () => {
     color: #666;
 }
 
+.header-cell.title-col {
+    width: calc(100% / 3);
+    flex-shrink: 0;
+}
+
+.header-cell.summary-col {
+    width: 50%;
+    flex-shrink: 0;
+}
+
+.header-cell.date-col {
+    width: calc(100% / 6);
+    flex-shrink: 0;
+}
+
 .grid-body {
     overflow-y: auto;
 }
 
 .grid-row {
-    display: grid;
-    grid-template-columns: 2fr 3fr 1fr 1.5fr;
+    display: flex;
     border-bottom: 1px solid rgba(255, 255, 255, 0.03);
     transition: background-color 0.2s ease;
 }
@@ -333,11 +326,32 @@ const getTagColor = () => {
     min-height: 48px;
 }
 
+.grid-cell.title-col {
+    width: 30%;
+    flex-shrink: 0;
+    padding-right: 16px;
+}
+
+.grid-cell.summary-col {
+    width: 65%;
+    flex-shrink: 0;
+    padding-right: 16px;
+}
+
+.grid-cell.date-col {
+    width: 5%;
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
 .title-text {
     font-size: 14px;
     font-weight: 400;
     color: #fff;
     line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .summary-text {
@@ -345,6 +359,9 @@ const getTagColor = () => {
     font-weight: 300;
     color: #aaa;
     line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .date-text {
@@ -353,34 +370,7 @@ const getTagColor = () => {
     font-weight: 400;
 }
 
-.tags-list {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.tag {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 500;
-    color: white;
-    white-space: nowrap;
-}
-
-.tag-count {
-    font-size: 11px;
-    color: #888;
-    font-weight: 500;
-}
-
 @media (max-width: 1024px) {
-    .grid-header,
-    .grid-row {
-        grid-template-columns: 2fr 3fr 1fr 1.5fr;
-    }
-
     .header-cell,
     .grid-cell {
         padding: 12px 20px;
@@ -441,10 +431,6 @@ const getTagColor = () => {
         font-size: 16px;
         font-weight: 500;
         margin-bottom: 12px;
-    }
-
-    .tags-list {
-        margin-bottom: 8px;
     }
 
     .date-text {
