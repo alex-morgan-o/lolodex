@@ -1,8 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Supabase configuration
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ||
+  "https://qgylyuyypkwcylxzisis.supabase.co";
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFneWx5dXl5cGt3Y3lseHppc2lzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4OTExOTEsImV4cCI6MjA3NjQ2NzE5MX0.gWVbrnq3zFvxTyJONs8y0Sm4XAlV6AsvxSubD1QKSU0";
 
 // Create a single supabase client for interacting with your database
 let supabaseClient: SupabaseClient | null = null;
