@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 import { useRoute, useRouter } from 'vue-router'
 import { useSupabase } from '../composables/use-supabase'
 import { useProcessedEmails, type ProcessedEmailRecord } from '../composables/use-processed-emails'
@@ -16,7 +18,12 @@ const idParam = computed(() => Number(route.params.id))
 const record = ref<ProcessedEmailRecord | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const showOriginal = ref(false)
+
+const markdown = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+})
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
@@ -38,7 +45,6 @@ const fetchRecord = async () => {
   try {
     loading.value = true
     error.value = null
-    showOriginal.value = false
 
     if (!idParam.value || Number.isNaN(idParam.value)) {
       error.value = 'Invalid record id'
@@ -85,6 +91,31 @@ onMounted(fetchRecord)
 watch(idParam, fetchRecord)
 
 const goBack = () => router.push('/')
+
+const normalizeMarkdownSpacing = (value: string) =>
+  value
+    .replace(/^(\s*[-*+])(\*\*|__)/gm, '$1 $2')
+    .replace(/(\*\*|__)([\s\S]*?)(\1)/g, (_match, marker, inner) => {
+      const trimmed = inner.replace(/^\s+|\s+$/g, '')
+      return `${marker}${trimmed}${marker}`
+    })
+
+const renderMarkdown = (value: string | null | undefined) => {
+  if (!value) return ''
+  const normalized = normalizeMarkdownSpacing(value)
+  return DOMPurify.sanitize(markdown.render(normalized))
+}
+
+const summaryHtml = computed(() => renderMarkdown(record.value?.summary))
+const fullTextHtml = computed(() => renderMarkdown(record.value?.full_text))
+
+const titleText = computed(() => {
+  const raw = record.value?.title || 'Untitled'
+  const normalized = normalizeMarkdownSpacing(raw)
+  const html = markdown.render(normalized)
+  const stripped = DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+  return stripped.trim()
+})
 </script>
 
 <template>
@@ -103,21 +134,21 @@ const goBack = () => router.push('/')
     <div v-else-if="!record" class="state-box">Record not found.</div>
 
     <div v-else class="detail-content">
-      <h1 class="title">{{ record.title || 'Untitled' }}</h1>
+      <h1 class="title">{{ titleText }}</h1>
       <div class="meta">
         <span v-if="record.from_email">From: {{ record.from_email }}</span>
-        <span v-if="record.to_email">To: {{ record.to_email }}</span>
         <span v-if="record.created_at">{{ formatDate(record.created_at) }}</span>
       </div>
 
-      <div v-if="record.summary" class="summary">{{ record.summary }}</div>
+      <div v-if="summaryHtml" class="notion-card">
+        <div class="notion-content" v-html="summaryHtml" />
+      </div>
 
       <div class="body">
-        <template v-if="record.full_text">
-          <button class="toggle-original" @click="showOriginal = !showOriginal">
-            {{ showOriginal ? 'Hide original message' : 'See original message' }}
-          </button>
-          <pre v-if="showOriginal" class="full-text">{{ record.full_text }}</pre>
+        <template v-if="fullTextHtml">
+          <div class="notion-card">
+            <div class="notion-content" v-html="fullTextHtml" />
+          </div>
         </template>
         <div v-else class="no-text">No full content available.</div>
       </div>
@@ -171,44 +202,100 @@ const goBack = () => router.push('/')
   margin-bottom: 16px;
 }
 
-.summary {
-  color: #ccc;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-
 .body { background: transparent; }
-
-.toggle-original {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  margin-bottom: 12px;
-}
-
-.toggle-original:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.full-text {
-  white-space: pre-wrap;
-  color: #ddd;
-  font-size: 14px;
-  line-height: 1.6;
-}
 
 .no-text { color: #888; font-size: 14px; }
 
 .state-box { color: #aaa; padding: 32px 0; }
 .state-box.error { color: #ff6b6b; }
+
+.notion-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(14px);
+}
+
+.notion-heading {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa5b1;
+  margin-bottom: 12px;
+}
+
+.notion-content {
+  color: #f5f6f7;
+  font-size: 15px;
+  line-height: 1.7;
+  font-feature-settings: 'liga' on, 'kern' on;
+}
+
+.notion-content h1,
+.notion-content h2,
+.notion-content h3,
+.notion-content h4,
+.notion-content h5,
+.notion-content h6 {
+  margin: 20px 0 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.notion-content p {
+  margin: 12px 0;
+}
+
+.notion-content ul,
+.notion-content ol {
+  margin: 12px 0;
+  padding-left: 22px;
+}
+
+.notion-content li {
+  margin: 8px 0;
+}
+
+.notion-content blockquote {
+  margin: 16px 0;
+  padding-left: 16px;
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  color: #d6daf0;
+  font-style: italic;
+}
+
+.notion-content code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 13px;
+}
+
+.notion-content pre {
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 16px -12px;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.notion-content a {
+  color: #6ab6ff;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(106, 182, 255, 0.35);
+  transition: border-color 0.2s ease;
+}
+
+.notion-content a:hover {
+  border-color: rgba(106, 182, 255, 0.8);
+}
 
 @media (max-width: 768px) {
   .detail-container { padding: 24px; }

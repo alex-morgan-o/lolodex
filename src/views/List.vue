@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import MarkdownIt from "markdown-it";
 import { useProcessedEmails } from "../composables/use-processed-emails";
 import { useRouter } from "vue-router";
 
@@ -7,6 +8,50 @@ const { records, loading, error } = useProcessedEmails();
 const router = useRouter();
 
 const searchQuery = ref("");
+
+const markdown = new MarkdownIt({
+    html: false,
+    linkify: false,
+    typographer: false,
+});
+
+const stripMarkdown = (value?: string | null): string => {
+    if (!value) return "";
+
+    const tokens = markdown.parse(value, {});
+    const result: string[] = [];
+
+    const visit = (tokenList: Array<any>): void => {
+        tokenList.forEach((token) => {
+            if (token.type === "inline" && Array.isArray(token.children)) {
+                visit(token.children as Array<any>);
+            } else if (
+                token.type === "text" ||
+                token.type === "code_inline" ||
+                token.type === "code_block" ||
+                token.type === "fence"
+            ) {
+                if (typeof token.content === "string") {
+                    result.push(token.content);
+                }
+            } else if (
+                token.type === "softbreak" ||
+                token.type === "hardbreak"
+            ) {
+                result.push(" ");
+            }
+        });
+    };
+
+    visit(tokens);
+
+    return result.join("").replace(/\s+/g, " ").trim();
+};
+
+const getPlainTitle = (title?: string | null): string => {
+    const stripped = stripMarkdown(title);
+    return stripped || "Untitled";
+};
 
 const filteredItems = computed(() => {
     if (!records.value) return [];
@@ -138,7 +183,7 @@ const formatDate = (dateString: string) => {
                 >
                     <div class="grid-cell title-col">
                         <div class="title-text">
-                            {{ record.title || "Untitled" }}
+                            {{ getPlainTitle(record.title) }}
                         </div>
                     </div>
 
